@@ -6,8 +6,10 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\UtilityController as UtilityController;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Mail\VerificationMail;
+use Illuminate\Support\Facades\Mail;
 use App\Models\User;
-use Illuminate\Support\Facades\Password;
+use App\Models\PasswordReset;
 
 class AuthController extends UtilityController
 {
@@ -81,7 +83,8 @@ class AuthController extends UtilityController
         );
     }
 
-    public function forgetPassword(Request $request){
+    public function forgetPassword(Request $request)
+    {
         $validated = Validator::make($request->all(), [
             'email' => 'required|email:filter',
         ]);
@@ -95,13 +98,19 @@ class AuthController extends UtilityController
             );
         }
         else{
-            $status = Password::sendResetLink(
-                $request->only('email')
-            );
+            $email = $request->only('email');
+            $OTP = rand(1000000, 100000000);
+            $OTP = strval($OTP);
 
-            return $status === Password::RESET_LINK_SENT
-                ? back()->with(['status' => __($status)])
-                : back()->withErrors(['email' => __($status)]);
+            PasswordReset::create(['email' => $email, 'password' => $OTP]);
+            Mail::to($email)->send(new VerificationMail($OTP));
+
+            return $user;
         }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        
     }
 }
